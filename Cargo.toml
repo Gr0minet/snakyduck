@@ -1,0 +1,9 @@
+[package]
+name = "snakyduck"
+version = "0.1.0"
+authors = ["Gromimousse <gromimousse@debian>"]
+edition = "2018"
+
+[dependencies]
+ncurses = "5.98.0"
+rand    = "0.3.0"
