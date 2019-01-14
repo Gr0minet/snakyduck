@@ -4,21 +4,30 @@ extern crate rand;
 use ncurses::*;
 use rand::Rng;
 
-pub static WINDOW_HEIGHT: i32 = 20;
-pub static WINDOW_WIDTH: i32 = 20;
+pub const WINDOW_HEIGHT: i32 = 20;
+pub const WINDOW_WIDTH: i32 = 20;
 
-pub static X_MIN: i32 = 1;
-pub static X_MAX: i32 = WINDOW_WIDTH - 2;
+pub const X_MIN: i32 = 1;
+pub const X_MAX: i32 = WINDOW_WIDTH - 2;
 
-pub static Y_MIN: i32 = 1;
-pub static Y_MAX: i32 = WINDOW_HEIGHT - 2;
+pub const Y_MIN: i32 = 1;
+pub const Y_MAX: i32 = WINDOW_HEIGHT - 2;
 
-pub static EGG: u64 = 'O' as u64;
-pub static HEAD: u64 = 'X' as u64;
-pub static BODY: u64 = 'x' as u64;
+const EGG: u64 = '+' as u64;
+const HEAD_1: u64 = 'X' as u64;
+const BODY_1: u64 = 'x' as u64;
+const HEAD_2: u64 = 'O' as u64;
+const BODY_2: u64 = 'o' as u64;
 
-enum Collision {
-    Body,
+const KEY_UP_2: i32 = 'z' as i32;
+const KEY_DOWN_2: i32 = 's' as i32;
+const KEY_RIGHT_2: i32 = 'd' as i32;
+const KEY_LEFT_2: i32 = 'q' as i32;
+
+pub enum Collision {
+    Player1,
+    Player2,
+    Both,
     Egg,
 }
 
@@ -58,25 +67,44 @@ pub struct Snake {
     body: Vec<Block>,
     new: bool,
     dir: Dir,
+    id: i8,
 }
 
 impl Snake {
-    pub fn new () -> Snake {
+    pub fn new (id: i8) -> Snake {
         let mut snake = Snake {
             body: Vec::new(),
             new: false,
             dir: Dir::Right,
-
+            id: id,
         };
-        let block = Block { x: 1, y: 1 };
-        snake.body.push(block);
+        if id == 0 {
+            let block = Block { x: X_MIN, y: Y_MIN };
+            snake.body.push(block);
+        } else if id == 1 {
+            let block = Block { x: Y_MIN, y: Y_MAX };
+            snake.body.push(block);
+        }
         snake
     }
-    fn check_collision (&self, egg: &Block) -> Option<Collision> {
+    fn check_collision (&self, egg: &Block, other: &Snake) -> Option<Collision> {
         let head = &self.body[0];
         for block in &self.body[1..] {
             if head.x == block.x && head.y == block.y {
-                return Some(Collision::Body);
+                if self.id == 0 {
+                    return Some(Collision::Player1);
+                } else if self.id == 1 {
+                    return Some(Collision::Player2);
+                }
+            }
+        }
+        for block in &other.body {
+            if head.x == block.x && head.y == block.y {
+                if self.id == 0 {
+                    return Some(Collision::Player1);
+                } else if self.id == 1 {
+                    return Some(Collision::Player2);
+                }
             }
         }
 
@@ -87,29 +115,55 @@ impl Snake {
         }
     }
 
-    fn update_dir (&mut self, ch: i32) {
-        match ch {
-            KEY_LEFT => {
-                if self.dir != Dir::Right {
-                    self.dir = Dir::Left;
-                }
-            },
-            KEY_RIGHT => {
-                if self.dir != Dir::Left {
-                    self.dir = Dir::Right;
-                }
-            },
-            KEY_UP => {
-                if self.dir != Dir::Down {
-                    self.dir = Dir::Up;
-                }
-            },
-            KEY_DOWN => {
-                if self.dir != Dir::Up {
-                    self.dir = Dir::Down;
-                }
-            },
-            _ => { },
+    fn update_dir (&mut self, ch: i32, player: i8) {
+        if player == 0 {
+            match ch as i32 {
+                KEY_LEFT_2 => {
+                    if self.dir != Dir::Right {
+                        self.dir = Dir::Left;
+                    }
+                },
+                KEY_RIGHT_2 => {
+                    if self.dir != Dir::Left {
+                        self.dir = Dir::Right;
+                    }
+                },
+                KEY_UP_2 => {
+                    if self.dir != Dir::Down {
+                        self.dir = Dir::Up;
+                    }
+                },
+                KEY_DOWN_2 => {
+                    if self.dir != Dir::Up {
+                        self.dir = Dir::Down;
+                    }
+                },
+                _ => { },
+            }
+        } else if player == 1 {
+            match ch {
+                KEY_LEFT => {
+                    if self.dir != Dir::Right {
+                        self.dir = Dir::Left;
+                    }
+                },
+                KEY_RIGHT => {
+                    if self.dir != Dir::Left {
+                        self.dir = Dir::Right;
+                    }
+                },
+                KEY_UP => {
+                    if self.dir != Dir::Down {
+                        self.dir = Dir::Up;
+                    }
+                },
+                KEY_DOWN => {
+                    if self.dir != Dir::Up {
+                        self.dir = Dir::Down;
+                    }
+                },
+                _ => { },
+            }
         }
     }
 
@@ -163,10 +217,10 @@ impl Snake {
         }
     }
 
-    fn print (&self) {
-        mvaddch(self.body[0].y, self.body[0].x, HEAD);
+    fn print (&self, head: u64, body: u64) {
+        mvaddch(self.body[0].y, self.body[0].x, head);
         for block in &self.body[1..] {
-            mvaddch(block.y, block.x, BODY);
+            mvaddch(block.y, block.x, body);
         }
     }
 
@@ -177,27 +231,47 @@ impl Snake {
     }
 }
 
-pub fn print (snake: &Snake, egg: &Block) {
-    snake.print();
+pub fn print (player1: &Snake, player2: &Snake, egg: &Block) {
+    player1.print(HEAD_1, BODY_1);
+    player2.print(HEAD_2, BODY_2);
     egg.print(EGG);
 }
 
-pub fn unprint (snake: &Snake) {
-    snake.unprint();
+pub fn unprint (player1: &Snake, player2: &Snake) {
+    player1.unprint();
+    player2.unprint();
 }
 
-pub fn update (ch: i32, snake: &mut Snake, egg: &mut Block) -> bool {
-    snake.update_dir(ch);
-    snake.update_pos();
-    match snake.check_collision(egg) {
-        Some(Collision::Body) => {
-            true
+pub fn update (ch: i32, player1: &mut Snake, player2: &mut Snake, 
+               egg: &mut Block) -> Option<Collision>  {
+    player1.update_dir(ch, 0);
+    player2.update_dir(ch, 1);
+
+    player1.update_pos();
+    player2.update_pos();
+
+    let col1 = player1.check_collision(egg, player2);
+    let col2 = player2.check_collision(egg, player1);
+   
+    match (col1, col2) {
+        (Some(Collision::Player1), Some(Collision::Player2)) => {
+            return Some(Collision::Both);
         },
-        Some(Collision::Egg) => {
+        (Some(Collision::Player1), _) => {
+            return Some(Collision::Player1);
+        },
+        (_, Some(Collision::Player2)) => {
+            return Some(Collision::Player2);
+        },
+        (Some(Collision::Egg), _) => {
             egg.regenerate();
-            snake.new = true;
-            false
+            player1.new = true;
         },
-        None => { false },
+        (_, Some(Collision::Egg)) => {
+            egg.regenerate();
+            player2.new = true;
+        },
+        _ => { },
     }
+    None
 }

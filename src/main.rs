@@ -1,6 +1,7 @@
 extern crate ncurses;
 
 use ncurses::*;
+use std::time::Instant;
 
 mod game;
 
@@ -19,7 +20,7 @@ fn main () {
     curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
 
     // Don't block on getch
-    timeout(100);
+    timeout(1);
 
     refresh();
 
@@ -38,21 +39,50 @@ fn main () {
 
     let win = create_win(0, 0);
 
-    let mut snake = Snake::new();
+    let mut player1 = Snake::new(0);
+    let mut player2 = Snake::new(1);
 
     let mut egg = Block::new();
+    print(&player1, &player2, &egg);
     
-    let mut ch = getch();
-    while ch != 'q' as i32 {
-        print(&snake, &egg);
-
+    let mut prev_time = Instant::now();
+    let mut ch = 'a' as i32;
+    let mut saved_ch = 'a' as i32;
+    while ch != '!' as i32 {
         ch = getch();
+        if ch != -1 {
+            saved_ch = ch;
+        }
+        let cur_time = Instant::now();
+        let diff = cur_time.duration_since(prev_time);
+        let diff = diff.as_secs() * 1_000 + (diff.subsec_nanos() / 1_000_000) as u64;
+        if diff >= 100 {
+            unprint(&player1, &player2);
 
-        unprint(&snake);
-        if update(ch, &mut snake, &mut egg) {
-            endwin();
-            println!("You lose!");
-            return;
+            match update(saved_ch, &mut player1, &mut player2, &mut egg) {
+                Some(Collision::Both) => {
+                    destroy_win(win);
+                    endwin();
+                    println!("Both players lose!");
+                    return;
+                }
+                Some(Collision::Player1) => {
+                    destroy_win(win);
+                    endwin();
+                    println!("Player1 loses!");
+                    return;
+                }
+                Some(Collision::Player2) => {
+                    destroy_win(win);
+                    endwin();
+                    println!("Player2 loses!");
+                    return;
+                }
+                _ => { }
+            }
+
+            print(&player1, &player2, &egg);
+            prev_time = cur_time;
         }
     }
 
