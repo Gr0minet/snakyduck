@@ -17,7 +17,7 @@ static EGG: u64 = 'O' as u64;
 static HEAD: u64 = 'X' as u64;
 static BODY: u64 = 'x' as u64;
 
-#[derive(PartialEq)]
+//#[derive(PartialEq)]
 enum Collision {
     Body,
     Egg,
@@ -147,7 +147,6 @@ impl Snake {
         }
 
         if self.new {
-            //printw(format!("x: {}, y: {}", prev_pos.0, prev_pos.1).as_ref());
             let bloc = Block { x: prev_pos.0, y: prev_pos.1 };
             self.body.push(bloc);
             self.new = false;
@@ -217,7 +216,7 @@ fn main () {
         ch = getch();
 
         unprint(&snake);
-        if update(ch, &mut snake, &mut egg) == Some(Collision::Body) {
+        if let Some(Collision::Body) = update(ch, &mut snake, &mut egg) {
             endwin();
             println!("You lose!");
             return;
@@ -255,7 +254,7 @@ fn update (ch: i32, snake: &mut Snake, egg: &mut Block) -> Option<Collision> {
     snake.update_dir(ch);
     snake.update_pos();
     let col = snake.check_collision(egg);
-    if col == Some(Collision::Egg) {
+    if let Some(Collision::Egg) = col {
         egg.regenerate();
         snake.new = true;
     }
