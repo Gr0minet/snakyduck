@@ -42,7 +42,7 @@ fn main () {
     let mut player1 = Snake::new(0);
     let mut player2 = Snake::new(1);
 
-    let mut egg = Block::new();
+    let mut egg = Block::new(&player1, &player2);
     print(&player1, &player2, &egg);
     
     let mut prev_time = Instant::now();

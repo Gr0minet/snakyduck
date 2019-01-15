@@ -3,9 +3,10 @@ extern crate rand;
 
 use ncurses::*;
 use rand::Rng;
+use std::cmp::Ordering;
 
-pub const WINDOW_HEIGHT: i32 = 20;
-pub const WINDOW_WIDTH: i32 = 20;
+pub const WINDOW_HEIGHT: i32 = 10;
+pub const WINDOW_WIDTH: i32 = 10;
 
 pub const X_MIN: i32 = 1;
 pub const X_MAX: i32 = WINDOW_WIDTH - 2;
@@ -48,21 +49,60 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn new () -> Block {
-        let block = Block {
-            x: rand::thread_rng().gen_range(X_MIN, X_MAX),
-            y: rand::thread_rng().gen_range(Y_MIN, Y_MAX),
-        };
+    pub fn new (player1: &Snake, player2: &Snake) -> Block {
+        let mut block = Block { x: 0, y: 0 };
+        block.regenerate(&player1, &player2);
         block
     }
 
-    fn regenerate (&mut self) {
-        self.x = rand::thread_rng().gen_range(X_MIN, X_MAX);
-        self.y = rand::thread_rng().gen_range(Y_MIN, Y_MAX);
+    fn regenerate (&mut self, player1: &Snake, player2: &Snake) {
+        let width = X_MAX - X_MIN + 1;
+        let height = Y_MAX - Y_MIN + 1;
+        let mut occupied_pos: Vec<i32> = Vec::new();
+        for block in &player1.body {
+            occupied_pos.push(block.to_i32());
+        }
+        for block in &player2.body {
+            occupied_pos.push(block.to_i32());
+        }
+        occupied_pos.sort();
+        let len = occupied_pos.len();
+        let mut rand_num = rand::thread_rng()
+                           .gen_range(0, width * height - (len as i32));
+        /*
+        let mut i = 0;
+        for e in &occupied_pos {
+            mvprintw(30 + i, 30, format!("pos:   ").as_ref());
+            mvprintw(30 + i, 30, format!("pos: {}", e).as_ref());
+            i += 1;
+        }
+        mvprintw(30, 30, format!("{}", len).as_ref());
+        mvprintw(27, 30, format!("rng: {}", rand_num).as_ref());
+        */
+
+        let mut pos = 0;
+        let mut idx = 0;
+        while rand_num > -1 {
+            if idx < len && pos == occupied_pos[idx] {
+                idx += 1;
+                pos += 1;
+            } else {
+                pos += 1;
+                rand_num -= 1;
+            }
+        }
+        pos -= 1;
+        //mvprintw(28, 30, format!("pos: {}", pos).as_ref());
+        self.x = X_MIN + pos % width;
+        self.y = Y_MIN + pos / width;
     }
 
     fn print (&self, ch: u64) {
         mvaddch(self.y, self.x, ch);
+    }
+
+    fn to_i32(&self) -> i32 {
+        (self.y - Y_MIN) * (X_MAX - X_MIN + 1) + self.x - X_MIN
     }
 }
 
@@ -325,11 +365,11 @@ pub fn update (input: &Input, player1: &mut Snake,
             return Some(Collision::Player2);
         },
         (Some(Collision::Egg), _) => {
-            egg.regenerate();
+            egg.regenerate(&player1, &player2);
             player1.new = true;
         },
         (_, Some(Collision::Egg)) => {
-            egg.regenerate();
+            egg.regenerate(&player1, &player2);
             player2.new = true;
         },
         _ => { },
