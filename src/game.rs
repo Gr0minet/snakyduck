@@ -14,15 +14,17 @@ pub const Y_MIN: i32 = 1;
 pub const Y_MAX: i32 = WINDOW_HEIGHT - 2;
 
 const EGG: u64 = '+' as u64;
-const HEAD_1: u64 = 'X' as u64;
+pub const HEAD_1: u64 = 'X' as u64;
 const BODY_1: u64 = 'x' as u64;
-const HEAD_2: u64 = 'O' as u64;
+pub const HEAD_2: u64 = 'O' as u64;
 const BODY_2: u64 = 'o' as u64;
 
 const KEY_UP_2: i32 = 'z' as i32;
 const KEY_DOWN_2: i32 = 's' as i32;
 const KEY_RIGHT_2: i32 = 'd' as i32;
 const KEY_LEFT_2: i32 = 'q' as i32;
+
+const QUIT: i32 = '!' as i32;
 
 pub enum Collision {
     Player1,
@@ -37,6 +39,7 @@ enum Dir {
     Left,
     Up,
     Down,
+    Null,
 }
 
 pub struct Block {
@@ -82,12 +85,14 @@ impl Snake {
             let block = Block { x: X_MIN, y: Y_MIN };
             snake.body.push(block);
         } else if id == 1 {
-            let block = Block { x: Y_MIN, y: Y_MAX };
+            let block = Block { x: Y_MAX - 1, y: Y_MAX - 1 };
             snake.body.push(block);
         }
         snake
     }
-    fn check_collision (&self, egg: &Block, other: &Snake) -> Option<Collision> {
+
+    fn check_collision (&self, egg: &Block, other: &Snake) 
+    -> Option<Collision> {
         let head = &self.body[0];
         for block in &self.body[1..] {
             if head.x == block.x && head.y == block.y {
@@ -115,54 +120,54 @@ impl Snake {
         }
     }
 
-    fn update_dir (&mut self, ch: i32, player: i8) {
+    fn update_dir (&mut self, input: &Input, player: i8) {
         if player == 0 {
-            match ch as i32 {
-                KEY_LEFT_2 => {
+            match input.dir_1 {
+                Dir::Left => {
                     if self.dir != Dir::Right {
                         self.dir = Dir::Left;
                     }
                 },
-                KEY_RIGHT_2 => {
+                Dir::Right => {
                     if self.dir != Dir::Left {
                         self.dir = Dir::Right;
                     }
                 },
-                KEY_UP_2 => {
+                Dir::Up => {
                     if self.dir != Dir::Down {
                         self.dir = Dir::Up;
                     }
                 },
-                KEY_DOWN_2 => {
+                Dir::Down => {
                     if self.dir != Dir::Up {
                         self.dir = Dir::Down;
                     }
                 },
-                _ => { },
+                Dir::Null => { },
             }
         } else if player == 1 {
-            match ch {
-                KEY_LEFT => {
+            match input.dir_2 {
+                Dir::Left => {
                     if self.dir != Dir::Right {
                         self.dir = Dir::Left;
                     }
                 },
-                KEY_RIGHT => {
+                Dir::Right => {
                     if self.dir != Dir::Left {
                         self.dir = Dir::Right;
                     }
                 },
-                KEY_UP => {
+                Dir::Up => {
                     if self.dir != Dir::Down {
                         self.dir = Dir::Up;
                     }
                 },
-                KEY_DOWN => {
+                Dir::Down => {
                     if self.dir != Dir::Up {
                         self.dir = Dir::Down;
                     }
                 },
-                _ => { },
+                Dir::Null => { },
             }
         }
     }
@@ -200,6 +205,7 @@ impl Snake {
                     head.y += 1;
                 }
             },
+            Dir::Null => { }
         }
 
         for block in &mut self.body[1..] {
@@ -231,6 +237,61 @@ impl Snake {
     }
 }
 
+pub struct Input {
+    dir_1: Dir,
+    dir_2: Dir,
+    pub quit: bool,
+}
+
+impl Input {
+    pub fn new () -> Input {
+        let input = Input {
+            dir_1: Dir::Null,
+            dir_2: Dir::Null,
+            quit: false,
+        };
+        input
+    }
+
+    pub fn handle_ch (&mut self, ch: i32) {
+        match ch {
+            KEY_LEFT => {
+                self.dir_1 = Dir::Left;
+            },
+            KEY_RIGHT => {
+                self.dir_1 = Dir::Right;
+            },
+            KEY_UP => {
+                self.dir_1 = Dir::Up;
+            },
+            KEY_DOWN => {
+                self.dir_1 = Dir::Down;
+            },
+            KEY_LEFT_2 => {
+                self.dir_2 = Dir::Left;
+            },
+            KEY_RIGHT_2 => {
+                self.dir_2 = Dir::Right;
+            },
+            KEY_UP_2 => {
+                self.dir_2 = Dir::Up;
+            },
+            KEY_DOWN_2 => {
+                self.dir_2 = Dir::Down;
+            },
+            QUIT => {
+                self.quit = true;
+            },
+            _ => { },
+        }
+    }
+    
+    pub fn reset (&mut self) {
+        self.dir_1 = Dir::Null;
+        self.dir_2 = Dir::Null;
+    }
+}
+
 pub fn print (player1: &Snake, player2: &Snake, egg: &Block) {
     player1.print(HEAD_1, BODY_1);
     player2.print(HEAD_2, BODY_2);
@@ -242,10 +303,10 @@ pub fn unprint (player1: &Snake, player2: &Snake) {
     player2.unprint();
 }
 
-pub fn update (ch: i32, player1: &mut Snake, player2: &mut Snake, 
-               egg: &mut Block) -> Option<Collision>  {
-    player1.update_dir(ch, 0);
-    player2.update_dir(ch, 1);
+pub fn update (input: &Input, player1: &mut Snake,
+               player2: &mut Snake, egg: &mut Block) -> Option<Collision> {
+    player1.update_dir(input, 0);
+    player2.update_dir(input, 1);
 
     player1.update_pos();
     player2.update_pos();
@@ -275,3 +336,4 @@ pub fn update (ch: i32, player1: &mut Snake, player2: &mut Snake,
     }
     None
 }
+

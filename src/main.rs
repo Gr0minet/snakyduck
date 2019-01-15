@@ -46,20 +46,23 @@ fn main () {
     print(&player1, &player2, &egg);
     
     let mut prev_time = Instant::now();
-    let mut ch = 'a' as i32;
-    let mut saved_ch = 'a' as i32;
-    while ch != '!' as i32 {
+    let mut ch: i32;
+    let mut input = Input::new();
+
+    while !input.quit {
+
         ch = getch();
         if ch != -1 {
-            saved_ch = ch;
+            input.handle_ch (ch);
         }
         let cur_time = Instant::now();
         let diff = cur_time.duration_since(prev_time);
-        let diff = diff.as_secs() * 1_000 + (diff.subsec_nanos() / 1_000_000) as u64;
+        let diff = diff.as_secs() * 1_000 + 
+                   (diff.subsec_nanos() / 1_000_000) as u64;
         if diff >= 100 {
             unprint(&player1, &player2);
 
-            match update(saved_ch, &mut player1, &mut player2, &mut egg) {
+            match update(&mut input, &mut player1, &mut player2, &mut egg) {
                 Some(Collision::Both) => {
                     destroy_win(win);
                     endwin();
@@ -69,18 +72,19 @@ fn main () {
                 Some(Collision::Player1) => {
                     destroy_win(win);
                     endwin();
-                    println!("Player1 loses!");
+                    println!("Player 'X' loses!");
                     return;
                 }
                 Some(Collision::Player2) => {
                     destroy_win(win);
                     endwin();
-                    println!("Player2 loses!");
+                    println!("Player 'O' loses!");
                     return;
                 }
                 _ => { }
             }
 
+            input.reset();
             print(&player1, &player2, &egg);
             prev_time = cur_time;
         }
@@ -103,3 +107,4 @@ fn destroy_win (win: WINDOW) {
     wrefresh(win);
     delwin(win);
 }
+
