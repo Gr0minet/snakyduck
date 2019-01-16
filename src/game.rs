@@ -3,7 +3,6 @@ extern crate rand;
 
 use ncurses::*;
 use rand::Rng;
-use std::cmp::Ordering;
 
 pub const WINDOW_HEIGHT: i32 = 10;
 pub const WINDOW_WIDTH: i32 = 10;
@@ -32,6 +31,7 @@ pub enum Collision {
     Player2,
     Both,
     Egg,
+    Null,
 }
 
 #[derive(PartialEq)]
@@ -132,31 +132,31 @@ impl Snake {
     }
 
     fn check_collision (&self, egg: &Block, other: &Snake) 
-    -> Option<Collision> {
+    -> Collision {
         let head = &self.body[0];
         for block in &self.body[1..] {
             if head.x == block.x && head.y == block.y {
                 if self.id == 0 {
-                    return Some(Collision::Player1);
+                    return Collision::Player1;
                 } else if self.id == 1 {
-                    return Some(Collision::Player2);
+                    return Collision::Player2;
                 }
             }
         }
         for block in &other.body {
             if head.x == block.x && head.y == block.y {
                 if self.id == 0 {
-                    return Some(Collision::Player1);
+                    return Collision::Player1;
                 } else if self.id == 1 {
-                    return Some(Collision::Player2);
+                    return Collision::Player2;
                 }
             }
         }
 
         if head.x == egg.x && head.y == egg.y {
-            Some(Collision::Egg)
+            Collision::Egg
         } else {
-            None
+            Collision::Null
         }
     }
 
@@ -344,7 +344,7 @@ pub fn unprint (player1: &Snake, player2: &Snake) {
 }
 
 pub fn update (input: &Input, player1: &mut Snake,
-               player2: &mut Snake, egg: &mut Block) -> Option<Collision> {
+               player2: &mut Snake, egg: &mut Block) -> Collision {
     player1.update_dir(input, 0);
     player2.update_dir(input, 1);
 
@@ -355,25 +355,25 @@ pub fn update (input: &Input, player1: &mut Snake,
     let col2 = player2.check_collision(egg, player1);
    
     match (col1, col2) {
-        (Some(Collision::Player1), Some(Collision::Player2)) => {
-            return Some(Collision::Both);
+        (Collision::Player1, Collision::Player2) => {
+            return Collision::Both;
         },
-        (Some(Collision::Player1), _) => {
-            return Some(Collision::Player1);
+        (Collision::Player1, _) => {
+            return Collision::Player1;
         },
-        (_, Some(Collision::Player2)) => {
-            return Some(Collision::Player2);
+        (_, Collision::Player2) => {
+            return Collision::Player2;
         },
-        (Some(Collision::Egg), _) => {
+        (Collision::Egg, _) => {
             egg.regenerate(&player1, &player2);
             player1.new = true;
         },
-        (_, Some(Collision::Egg)) => {
+        (_, Collision::Egg) => {
             egg.regenerate(&player1, &player2);
             player2.new = true;
         },
         _ => { },
     }
-    None
+    Collision::Null
 }
 

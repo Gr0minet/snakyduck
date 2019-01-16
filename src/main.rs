@@ -20,7 +20,7 @@ fn main () {
     curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
 
     // Don't block on getch
-    timeout(1);
+    timeout(0);
 
     refresh();
 
@@ -63,19 +63,19 @@ fn main () {
             unprint(&player1, &player2);
 
             match update(&mut input, &mut player1, &mut player2, &mut egg) {
-                Some(Collision::Both) => {
+                Collision::Both => {
                     destroy_win(win);
                     endwin();
                     println!("Both players lose!");
                     return;
                 }
-                Some(Collision::Player1) => {
+                Collision::Player1 => {
                     destroy_win(win);
                     endwin();
                     println!("Player 'X' loses!");
                     return;
                 }
-                Some(Collision::Player2) => {
+                Collision::Player2 => {
                     destroy_win(win);
                     endwin();
                     println!("Player 'O' loses!");
