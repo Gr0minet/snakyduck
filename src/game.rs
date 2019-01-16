@@ -4,14 +4,14 @@ extern crate rand;
 use ncurses::*;
 use rand::Rng;
 
-pub const WINDOW_HEIGHT: i32 = 10;
-pub const WINDOW_WIDTH: i32 = 10;
+pub const MAIN_HEIGHT: i32 = 24;
+pub const MAIN_WIDTH: i32 = 80;
 
-pub const X_MIN: i32 = 1;
-pub const X_MAX: i32 = WINDOW_WIDTH - 2;
+pub const GAME_HEIGHT: i32 = MAIN_HEIGHT - 2;
+pub const GAME_WIDTH: i32 = 40;
 
-pub const Y_MIN: i32 = 1;
-pub const Y_MAX: i32 = WINDOW_HEIGHT - 2;
+pub const INFO_HEIGHT: i32 = MAIN_HEIGHT - 2;
+pub const INFO_WIDTH: i32 = MAIN_WIDTH - GAME_WIDTH - 3;
 
 const EGG: u64 = '+' as u64;
 pub const HEAD_1: u64 = 'X' as u64;
@@ -49,15 +49,12 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn new (player1: &Snake, player2: &Snake) -> Block {
-        let mut block = Block { x: 0, y: 0 };
-        block.regenerate(&player1, &player2);
+    pub fn new () -> Block {
+        let block = Block { x: 0, y: 0 };
         block
     }
 
-    fn regenerate (&mut self, player1: &Snake, player2: &Snake) {
-        let width = X_MAX - X_MIN + 1;
-        let height = Y_MAX - Y_MIN + 1;
+    pub fn regenerate (&mut self, player1: &Snake, player2: &Snake) {
         let mut occupied_pos: Vec<i32> = Vec::new();
         for block in &player1.body {
             occupied_pos.push(block.to_i32());
@@ -68,7 +65,7 @@ impl Block {
         occupied_pos.sort();
         let len = occupied_pos.len();
         let mut rand_num = rand::thread_rng()
-                           .gen_range(0, width * height - (len as i32));
+                        .gen_range(0, GAME_WIDTH * GAME_HEIGHT - (len as i32));
         /*
         let mut i = 0;
         for e in &occupied_pos {
@@ -93,16 +90,16 @@ impl Block {
         }
         pos -= 1;
         //mvprintw(28, 30, format!("pos: {}", pos).as_ref());
-        self.x = X_MIN + pos % width;
-        self.y = Y_MIN + pos / width;
+        self.x = pos % GAME_WIDTH;
+        self.y = pos / GAME_WIDTH;
     }
 
-    fn print (&self, ch: u64) {
-        mvaddch(self.y, self.x, ch);
+    fn print (&self, win: WINDOW, ch: u64) {
+        mvwaddch(win, self.y, self.x, ch);
     }
 
     fn to_i32(&self) -> i32 {
-        (self.y - Y_MIN) * (X_MAX - X_MIN + 1) + self.x - X_MIN
+        self.y * GAME_WIDTH + self.x 
     }
 }
 
@@ -122,17 +119,17 @@ impl Snake {
             id: id,
         };
         if id == 0 {
-            let block = Block { x: X_MIN, y: Y_MIN };
+            let block = Block { x: 0, y: 0 };
             snake.body.push(block);
         } else if id == 1 {
-            let block = Block { x: Y_MAX - 1, y: Y_MAX - 1 };
+            let block = Block { x: GAME_WIDTH - 1, y: GAME_HEIGHT - 1 };
+            snake.dir = Dir::Left;
             snake.body.push(block);
         }
         snake
     }
 
-    fn check_collision (&self, egg: &Block, other: &Snake) 
-    -> Collision {
+    fn check_collision (&self, egg: &Block, other: &Snake) -> Collision {
         let head = &self.body[0];
         for block in &self.body[1..] {
             if head.x == block.x && head.y == block.y {
@@ -218,29 +215,29 @@ impl Snake {
 
         match self.dir {
             Dir::Left => {
-                if head.x == X_MIN {
-                    head.x = X_MAX;
+                if head.x == 0 {
+                    head.x = GAME_WIDTH - 1;
                 } else {
                     head.x -= 1;
                 }
             }, 
             Dir::Right => {
-                if head.x == X_MAX {
-                    head.x = X_MIN;
+                if head.x == GAME_WIDTH - 1 {
+                    head.x = 0;
                 } else {
                     head.x += 1;
                 }
             },
             Dir::Up => {
-                if head.y == Y_MIN {
-                    head.y = Y_MAX;
+                if head.y == 0 {
+                    head.y = GAME_HEIGHT - 1;
                 } else {
                     head.y -= 1;
                 }
             },
             Dir::Down => {
-                if head.y == Y_MAX {
-                    head.y = Y_MIN;
+                if head.y == GAME_HEIGHT - 1 {
+                    head.y = 0;
                 } else {
                     head.y += 1;
                 }
@@ -263,16 +260,16 @@ impl Snake {
         }
     }
 
-    fn print (&self, head: u64, body: u64) {
-        mvaddch(self.body[0].y, self.body[0].x, head);
+    fn print (&self, win: WINDOW, head: u64, body: u64) {
+        mvwaddch(win, self.body[0].y, self.body[0].x, head);
         for block in &self.body[1..] {
-            mvaddch(block.y, block.x, body);
+            mvwaddch(win, block.y, block.x, body);
         }
     }
 
-    fn unprint (&self) {
+    fn unprint (&self, win: WINDOW) {
         for block in &self.body {
-            mvaddch(block.y, block.x, ' ' as u64);
+            mvwaddch(win, block.y, block.x, ' ' as u64);
         }
     }
 }
@@ -332,15 +329,15 @@ impl Input {
     }
 }
 
-pub fn print (player1: &Snake, player2: &Snake, egg: &Block) {
-    player1.print(HEAD_1, BODY_1);
-    player2.print(HEAD_2, BODY_2);
-    egg.print(EGG);
+pub fn print (win: WINDOW, player1: &Snake, player2: &Snake, egg: &Block) {
+    player1.print(win, HEAD_1, BODY_1);
+    player2.print(win, HEAD_2, BODY_2);
+    egg.print(win, EGG);
 }
 
-pub fn unprint (player1: &Snake, player2: &Snake) {
-    player1.unprint();
-    player2.unprint();
+pub fn unprint (win: WINDOW, player1: &Snake, player2: &Snake) {
+    player1.unprint(win);
+    player2.unprint(win);
 }
 
 pub fn update (input: &Input, player1: &mut Snake,
