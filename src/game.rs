@@ -5,7 +5,7 @@ use ncurses::*;
 use rand::Rng;
 
 pub const MAIN_HEIGHT: i32 = 24;
-pub const MAIN_WIDTH: i32 = 80;
+pub const MAIN_WIDTH: i32 = 70;
 
 pub const GAME_HEIGHT: i32 = MAIN_HEIGHT - 2;
 pub const GAME_WIDTH: i32 = 40;
@@ -66,16 +66,6 @@ impl Block {
         let len = occupied_pos.len();
         let mut rand_num = rand::thread_rng()
                         .gen_range(0, GAME_WIDTH * GAME_HEIGHT - (len as i32));
-        /*
-        let mut i = 0;
-        for e in &occupied_pos {
-            mvprintw(30 + i, 30, format!("pos:   ").as_ref());
-            mvprintw(30 + i, 30, format!("pos: {}", e).as_ref());
-            i += 1;
-        }
-        mvprintw(30, 30, format!("{}", len).as_ref());
-        mvprintw(27, 30, format!("rng: {}", rand_num).as_ref());
-        */
 
         let mut pos = 0;
         let mut idx = 0;
@@ -89,7 +79,7 @@ impl Block {
             }
         }
         pos -= 1;
-        //mvprintw(28, 30, format!("pos: {}", pos).as_ref());
+
         self.x = pos % GAME_WIDTH;
         self.y = pos / GAME_WIDTH;
     }

@@ -36,76 +36,9 @@ fn main () {
                  MAIN_WIDTH, MAIN_HEIGHT);
         return;
     }
+    menu_screen();
+    play();
 
-    let (win1, win2) = create_border();
-    let game_win = create_win(1, 1, GAME_HEIGHT, GAME_WIDTH, false);
-    let info_win = create_win(1, 2 + GAME_WIDTH, INFO_HEIGHT, INFO_WIDTH,
-                              false);
-    
-    let mut player1 = Snake::new(0);
-    let mut player2 = Snake::new(1);
-
-    let mut egg = Block::new();
-    egg.regenerate(&player1, &player2);
-
-    print(game_win, &player1, &player2, &egg);
-    wrefresh(game_win);
-    
-    let mut prev_time = Instant::now();
-    let mut ch: i32;
-    let mut input = Input::new();
-
-    while !input.quit {
-
-        ch = getch();
-        if ch != -1 {
-            input.handle_ch (ch);
-        }
-        let cur_time = Instant::now();
-        let diff = cur_time.duration_since(prev_time);
-        let diff = diff.as_secs() * 1_000 + 
-                   (diff.subsec_nanos() / 1_000_000) as u64;
-        if diff >= 100 {
-            unprint(game_win, &player1, &player2);
-
-            match update(&mut input, &mut player1, &mut player2, &mut egg) {
-                Collision::Both => {
-                    destroy_win(game_win);
-                    destroy_win(info_win);
-                    delete_border(win1, win2);
-                    endwin();
-                    println!("Both players lose!");
-                    return;
-                }
-                Collision::Player1 => {
-                    destroy_win(game_win);
-                    destroy_win(info_win);
-                    delete_border(win1, win2);
-                    endwin();
-                    println!("Player 'X' loses!");
-                    return;
-                }
-                Collision::Player2 => {
-                    destroy_win(game_win);
-                    destroy_win(info_win);
-                    delete_border(win1, win2);
-                    endwin();
-                    println!("Player 'O' loses!");
-                    return;
-                }
-                _ => { }
-            }
-
-            input.reset();
-            print(game_win, &player1, &player2, &egg);
-            wrefresh(game_win);
-            prev_time = cur_time;
-        }
-    }
-
-    destroy_win(game_win);
-    destroy_win(info_win);
-    delete_border(win1, win2);
     endwin();
 }
 
@@ -140,5 +73,85 @@ fn create_border () -> (WINDOW, WINDOW) {
 fn delete_border (win1: WINDOW, win2: WINDOW) {
     destroy_win(win1);
     destroy_win(win2);
+}
+
+fn play () {
+    let (win1, win2) = create_border();
+    let game_win = create_win(1, 1, GAME_HEIGHT, GAME_WIDTH, false);
+    let info_win = create_win(1, 2 + GAME_WIDTH, INFO_HEIGHT, INFO_WIDTH,
+                              false);
+    
+    let mut player1 = Snake::new(0);
+    let mut player2 = Snake::new(1);
+
+    let mut egg = Block::new();
+    egg.regenerate(&player1, &player2);
+
+    print(game_win, &player1, &player2, &egg);
+    wrefresh(game_win);
+    
+    let mut prev_time = Instant::now();
+    let mut ch: i32;
+    let mut input = Input::new();
+
+    while !input.quit {
+
+        ch = getch();
+        if ch != -1 {
+            input.handle_ch (ch);
+        }
+        let cur_time = Instant::now();
+        let diff = cur_time.duration_since(prev_time);
+        let diff = diff.as_secs() * 1_000 + 
+                   (diff.subsec_nanos() / 1_000_000) as u64;
+        if diff >= 100 {
+            unprint(game_win, &player1, &player2);
+
+            match update(&mut input, &mut player1, &mut player2, &mut egg) {
+                Collision::Both => {
+                    print_info(info_win, "Both players lose!");
+                    break;
+                }
+                Collision::Player1 => {
+                    print_info(info_win, "Player 'X' loses!");
+                    break;
+                }
+                Collision::Player2 => {
+                    print_info(info_win, "Player 'O' loses!");
+                    break;
+                }
+                _ => { }
+            }
+
+            input.reset();
+            print(game_win, &player1, &player2, &egg);
+            wrefresh(game_win);
+            prev_time = cur_time;
+        }
+    }
+
+    timeout(-1);
+    getch();
+
+    destroy_win(game_win);
+    destroy_win(info_win);
+    delete_border(win1, win2);
+}
+
+
+fn menu_screen () {
+    let win = create_win(0, 0, MAIN_HEIGHT, MAIN_WIDTH, true);
+    timeout(-1);
+    let msg = "Press any key to play";
+    mvprintw(MAIN_HEIGHT/2 - 1, MAIN_WIDTH/2 - (msg.len() as i32)/2, msg);
+    getch();
+    timeout(0);
+    destroy_win(win);
+}
+
+fn print_info (win: WINDOW, msg: &str) {
+    mvwprintw(win, INFO_HEIGHT/2 - 1,
+              INFO_WIDTH/2 - (msg.len() as i32)/2, msg);
+    wrefresh(win);
 }
 
